@@ -41,6 +41,7 @@ tree -L 2
     └── scripts
 ```
 
+## 1) 레이어 만들고 추가 (경로 정확히)
 ```
 cd ~/yocto/poky
 source oe-init-build-env build
@@ -64,5 +65,34 @@ bitbake-layers show-layers
    └─ firstboot-ssh_1.0.bb
 ```
 
+## 2) `local.conf` 최소 추가 (systemd + SSH + 네트워크)
+~/yocto/poky/build/conf/local.conf
+```
+MACHINE ?= "raspberrypi4"
+
+IMAGE_FSTYPES += "wic.bz2 wic.bmap"
+
+# SSH 서버 + 개발 편의(첫 접속 쉽게)
+IMAGE_FEATURES += "ssh-server-openssh"
+EXTRA_IMAGE_FEATURES += "debug-tweaks"
+
+# 네트워크 유틸
+IMAGE_INSTALL:append = " firstboot-ssh connman connman-client iproute2"
+
+# systemd로 운영 (meta-raspberrypi와 잘 맞음)
+DISTRO_FEATURES:append = " systemd pam"
+VIRTUAL-RUNTIME_init_manager = "systemd"
+VIRTUAL-RUNTIME_initscripts = ""
+SYSTEMD_AUTO_ENABLE = "enable"
+```
+
+3) 빌드 & 굽기
+```
+bitbake -c cleansstate core-image-minimal
+bitbake core-image-minimal
+
+sudo umount /dev/sdb* 2>/dev/null || true
+sudo bmaptool copy tmp/deploy/images/raspberrypi4/core-image-minimal-*.rootfs.wic.bz2 /dev/sdb
+```
 
 
